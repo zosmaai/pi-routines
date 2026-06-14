@@ -57,9 +57,15 @@ const extension: ExtensionFactory = (pi: ExtensionAPI) => {
       | ((task: import("./cronTasks.ts").ScheduledTask, store: CronTaskStore, runId: string) => Promise<void>)
       | undefined;
 
+    // Optional Cowork-specific lock file (separate from pi CLI's lock)
+    const lockFilePath = (globalThis as Record<string, unknown>).__PI_ROUTINES_LOCK_FILE as
+      | string
+      | undefined;
+
     scheduler = new CronScheduler({
       cwd: ctx.cwd,
       sessionId,
+      lockFilePath,
       onFire: (task) => {
         const message = [
           `[Scheduled task fired: ${task.name}]`,
