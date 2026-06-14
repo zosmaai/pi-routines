@@ -7,15 +7,13 @@
  * - onFire: send the task's prompt as a user message via pi.sendUserMessage
  *
  * ── Zosma Cowork integration (#300) ──────────────────────────────────────────
- * When loaded by the Cowork sidecar, we export the extension factory AND the
- * core classes so the sidecar can create schedulers with custom callbacks:
+ * When loaded by the Cowork sidecar, the sidecar sets
+ * `globalThis.__PI_ROUTINES_ON_FIRE` to an async function
+ * `(task, store, runId) => Promise<void>` that routes the fire into a Cowork
+ * session instead of sendUserMessage. Runs are recorded automatically.
  *
- *   import * as routines from "pi-routines";
- *   const scheduler = new routines.CronScheduler({ ... onFireCallback: ... });
- *
- * The sidecar sets `globalThis.__PI_ROUTINES_ON_FIRE` to an async function
- * `(task, store) => Promise<void>` that routes the fire into a Cowork session.
- * If set, the factory uses it as `onFireCallback` instead of `sendUserMessage`.
+ * Both the pi CLI and Cowork share the same task file (.pi/scheduled_tasks.json)
+ * and lock file (.pi/scheduled_tasks.lock) — one source of truth.
  */
 
 import type { ExtensionAPI, ExtensionFactory } from "@earendil-works/pi-coding-agent";
@@ -59,21 +57,9 @@ const extension: ExtensionFactory = (pi: ExtensionAPI) => {
       | ((task: import("./cronTasks.ts").ScheduledTask, store: CronTaskStore, runId: string) => Promise<void>)
       | undefined;
 
-    // Check for custom tasks file path (#300: Cowork uses cowork_scheduled_tasks.json)
-    const tasksFilePath = (globalThis as Record<string, unknown>).__PI_ROUTINES_TASKS_FILE as
-      | string
-      | undefined;
-
-    // Check for custom lock file path (#300: Cowork uses its own lock)
-    const lockFilePath = (globalThis as Record<string, unknown>).__PI_ROUTINES_LOCK_FILE as
-      | string
-      | undefined;
-
     scheduler = new CronScheduler({
       cwd: ctx.cwd,
       sessionId,
-      tasksFilePath,
-      lockFilePath,
       onFire: (task) => {
         const message = [
           `[Scheduled task fired: ${task.name}]`,
