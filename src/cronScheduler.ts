@@ -41,13 +41,18 @@ export interface CronSchedulerOptions {
    * the Cowork sidecar can intercept task fires and route them into a Cowork
    * session instead of the pi CLI terminal.
    *
-   * The callback receives the task and a `recordRun` function + `generateRunId`
-   * for recording runs. It should return a promise that resolves when the run
-   * is complete (or rejects on failure).
+   * The callback receives the task and store for recording runs.
+   * It should return a promise that resolves when the run is complete.
    */
-  onFireCallback?: (task: ScheduledTask, store: CronTaskStore) => Promise<void>;
+  onFireCallback?: (
+    task: ScheduledTask,
+    store: CronTaskStore,
+    runId: string,
+  ) => Promise<void>;
   /** Optional custom tasks file path (#300). Defaults to .pi/scheduled_tasks.json. */
   tasksFilePath?: string;
+  /** Optional custom lock file path (#300). Defaults to .pi/scheduled_tasks.lock. */
+  lockFilePath?: string;
   onMissedTasks?: (tasks: ScheduledTask[]) => void;
   onError?: (error: Error) => void;
 }
@@ -58,7 +63,7 @@ export class CronScheduler {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private watcher: FSWatcher | null = null;
   private onFire: (task: ScheduledTask) => void;
-  private onFireCallback?: (task: ScheduledTask, store: CronTaskStore) => Promise<void>;
+  private onFireCallback?: (task: ScheduledTask, store: CronTaskStore, runId: string) => Promise<void>;
   private onMissedTasks?: (tasks: ScheduledTask[]) => void;
   private onError?: (error: Error) => void;
   private running = false;
@@ -73,7 +78,7 @@ export class CronScheduler {
     this.onMissedTasks = options.onMissedTasks;
     this.onError = options.onError;
     this.store = new CronTaskStore(this.cwd, options.tasksFilePath);
-    this.lock = new CronTasksLock(this.cwd, this.sessionId);
+    this.lock = new CronTasksLock(this.cwd, this.sessionId, options.lockFilePath);
   }
 
   getStore(): CronTaskStore {
@@ -300,9 +305,9 @@ export class CronScheduler {
     if (this.onFireCallback) {
       // Sidecar-managed routing: the callback handles running the task
       // in a Cowork session and recording the result.
-      // We expect the callback to handle updating the run status itself,
-      // but we guard against unhandled rejection.
-      this.onFireCallback(task, this.store).then(
+      // Pass the runId so the callback can update the existing run record
+      // instead of creating a new one.
+      this.onFireCallback(task, this.store, runId).then(
         () => {
           // If the callback didn't update the run status, mark as completed
           const runs = this.store.getRuns(task.id, 1);

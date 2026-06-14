@@ -56,7 +56,7 @@ const extension: ExtensionFactory = (pi: ExtensionAPI) => {
 
     // Check for Cowork-sidecar override of onFire
     const coworkOnFire = (globalThis as Record<string, unknown>).__PI_ROUTINES_ON_FIRE as
-      | ((task: import("./cronTasks.ts").ScheduledTask, store: CronTaskStore) => Promise<void>)
+      | ((task: import("./cronTasks.ts").ScheduledTask, store: CronTaskStore, runId: string) => Promise<void>)
       | undefined;
 
     // Check for custom tasks file path (#300: Cowork uses cowork_scheduled_tasks.json)
@@ -64,10 +64,16 @@ const extension: ExtensionFactory = (pi: ExtensionAPI) => {
       | string
       | undefined;
 
+    // Check for custom lock file path (#300: Cowork uses its own lock)
+    const lockFilePath = (globalThis as Record<string, unknown>).__PI_ROUTINES_LOCK_FILE as
+      | string
+      | undefined;
+
     scheduler = new CronScheduler({
       cwd: ctx.cwd,
       sessionId,
       tasksFilePath,
+      lockFilePath,
       onFire: (task) => {
         const message = [
           `[Scheduled task fired: ${task.name}]`,

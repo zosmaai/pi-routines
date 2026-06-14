@@ -36,8 +36,8 @@ export class CronTasksLock {
   private onAcquired?: () => void;
   private onLost?: () => void;
 
-  constructor(cwd: string, sessionId: string) {
-    this.lockFilePath = path.join(cwd, ".pi", "scheduled_tasks.lock");
+  constructor(cwd: string, sessionId: string, lockFilePath?: string) {
+    this.lockFilePath = lockFilePath ?? path.join(cwd, ".pi", "scheduled_tasks.lock");
     this.sessionId = sessionId;
     this.pid = process.pid;
   }
