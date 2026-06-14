@@ -59,9 +59,15 @@ const extension: ExtensionFactory = (pi: ExtensionAPI) => {
       | ((task: import("./cronTasks.ts").ScheduledTask, store: CronTaskStore) => Promise<void>)
       | undefined;
 
+    // Check for custom tasks file path (#300: Cowork uses cowork_scheduled_tasks.json)
+    const tasksFilePath = (globalThis as Record<string, unknown>).__PI_ROUTINES_TASKS_FILE as
+      | string
+      | undefined;
+
     scheduler = new CronScheduler({
       cwd: ctx.cwd,
       sessionId,
+      tasksFilePath,
       onFire: (task) => {
         const message = [
           `[Scheduled task fired: ${task.name}]`,

@@ -46,6 +46,8 @@ export interface CronSchedulerOptions {
    * is complete (or rejects on failure).
    */
   onFireCallback?: (task: ScheduledTask, store: CronTaskStore) => Promise<void>;
+  /** Optional custom tasks file path (#300). Defaults to .pi/scheduled_tasks.json. */
+  tasksFilePath?: string;
   onMissedTasks?: (tasks: ScheduledTask[]) => void;
   onError?: (error: Error) => void;
 }
@@ -70,7 +72,7 @@ export class CronScheduler {
     this.onFireCallback = options.onFireCallback;
     this.onMissedTasks = options.onMissedTasks;
     this.onError = options.onError;
-    this.store = new CronTaskStore(this.cwd);
+    this.store = new CronTaskStore(this.cwd, options.tasksFilePath);
     this.lock = new CronTasksLock(this.cwd, this.sessionId);
   }
 
@@ -298,13 +300,27 @@ export class CronScheduler {
     if (this.onFireCallback) {
       // Sidecar-managed routing: the callback handles running the task
       // in a Cowork session and recording the result.
-      this.onFireCallback(task, this.store).catch((err) => {
-        console.error(`[pi-routines] onFireCallback failed for task ${task.id}:`, err);
-        this.store.updateRun(task.id, runId, {
-          status: "failed",
-          completedAt: new Date().toISOString(),
-        });
-      });
+      // We expect the callback to handle updating the run status itself,
+      // but we guard against unhandled rejection.
+      this.onFireCallback(task, this.store).then(
+        () => {
+          // If the callback didn't update the run status, mark as completed
+          const runs = this.store.getRuns(task.id, 1);
+          if (runs.length > 0 && runs[0].runId === runId && runs[0].status === "pending") {
+            this.store.updateRun(task.id, runId, {
+              status: "completed",
+              completedAt: new Date().toISOString(),
+            });
+          }
+        },
+        (err) => {
+          console.error(`[pi-routines] onFireCallback failed for task ${task.id}:`, err);
+          this.store.updateRun(task.id, runId, {
+            status: "failed",
+            completedAt: new Date().toISOString(),
+          });
+        },
+      );
     } else {
       // Default: send as user message (original pi CLI behavior)
       try {

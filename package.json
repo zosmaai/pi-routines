@@ -1,5 +1,6 @@
 {
   "name": "pi-routines",
+"private": true,
   "version": "0.1.0",
   "description": "Cron scheduling system for pi — port of Claude Code's internal scheduler",
   "license": "MIT",
