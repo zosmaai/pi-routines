@@ -16,6 +16,8 @@
  * and lock file (.pi/scheduled_tasks.lock) — one source of truth.
  */
 
+import * as fs from "node:fs";
+import * as path from "node:path";
 import type { ExtensionAPI, ExtensionFactory } from "@earendil-works/pi-coding-agent";
 import { CronScheduler } from "./cronScheduler.ts";
 import { CronTaskStore, type TaskRun } from "./cronTasks.ts";
@@ -67,6 +69,23 @@ const extension: ExtensionFactory = (pi: ExtensionAPI) => {
       sessionId,
       lockFilePath,
       onFire: (task) => {
+        // If Cowork's lock file exists, its scheduler is running.
+        // The pi CLI defers so tasks fire inside Cowork instead of
+        // the terminal. Cowork's own process uses onFireCallback
+        // instead of onFire, so this check only applies to the CLI.
+        if (!lockFilePath) {
+          const coworkLockPath = path.join(ctx.cwd, ".pi", "cowork_tasks.lock");
+          try {
+            fs.accessSync(coworkLockPath, fs.constants.F_OK);
+            console.log(
+              `[pi-routines] Cowork is active — deferring "${task.name}"`,
+            );
+            return;
+          } catch {
+            // No Cowork lock — fire normally
+          }
+        }
+
         const message = [
           `[Scheduled task fired: ${task.name}]`,
           "",
