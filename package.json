@@ -1,0 +1,55 @@
+{
+  "name": "pi-routines",
+  "version": "0.1.0",
+  "description": "Cron scheduling system for pi — port of Claude Code's internal scheduler",
+  "license": "MIT",
+  "type": "module",
+  "author": "offbynan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/offbynan/pi-routines.git"
+  },
+  "homepage": "https://github.com/offbynan/pi-routines#readme",
+  "bugs": {
+    "url": "https://github.com/offbynan/pi-routines/issues"
+  },
+  "keywords": [
+    "pi",
+    "pi-extension",
+    "cron",
+    "scheduler",
+    "tasks",
+    "routines",
+    "claude-code"
+  ],
+  "files": [
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": ["src/index.ts"]
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.0",
+    "typebox": "^1.1.38"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.78.0"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.78.1",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.8"
+  }
+}
