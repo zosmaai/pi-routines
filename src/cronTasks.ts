@@ -55,6 +55,19 @@ export interface TaskRun {
   completedAt?: string;
   /** Session ID of the Cowork session that executed this run. */
   sessionId?: string;
+  /**
+   * Full conversation captured while the run executed: thinking, text, tool
+   * calls & results. Written incrementally by Cowork's onFireCallback so the
+   * UI can render live steps. The pi CLI default onFire leaves this undefined.
+   */
+  conversation?: Array<{
+    type: "thinking" | "text" | "tool_call" | "tool_result";
+    content?: string;
+    toolName?: string;
+    toolArgs?: Record<string, unknown>;
+    toolResult?: string;
+    toolError?: boolean;
+  }>;
 }
 
 interface DurableTaskFile {

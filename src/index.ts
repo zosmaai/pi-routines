@@ -64,6 +64,24 @@ const extension: ExtensionFactory = (pi: ExtensionAPI) => {
       | string
       | undefined;
 
+    // ── Cowork-only scheduler gate (#300) ───────────────────────────────
+    // This forked pi-routines runs the scheduler ONLY inside Zosma Cowork.
+    // Cowork's sidecar sets globalThis.__PI_ROUTINES_ON_FIRE; the pi CLI/TUI
+    // never does. So if it's unset we are the pi CLI: NEVER create a scheduler.
+    //
+    // This is deliberately NOT gated on cowork_active / cowork_tasks.lock
+    // files: those are timing- and cleanup-dependent (a pi session started
+    // before Cowork, or stale lock files, would otherwise run a duplicate
+    // scheduler that fires tasks into the terminal). Keying purely on the
+    // in-process onFire override means routines run iff Cowork's process runs,
+    // and stop the moment Cowork is closed.
+    if (!coworkOnFire) {
+      console.log(
+        "[pi-routines] Not running inside Cowork — scheduler disabled (routines run only in Zosma Cowork)",
+      );
+      return;
+    }
+
     scheduler = new CronScheduler({
       cwd: ctx.cwd,
       sessionId,
